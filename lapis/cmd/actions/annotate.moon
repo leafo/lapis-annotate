@@ -71,6 +71,7 @@ annotate_model = (config, fname) ->
       error "no models passed to annotate"
 
     for fname in *args
+      print "Annotating #{fname}"
       annotate_model config, fname
 
 }

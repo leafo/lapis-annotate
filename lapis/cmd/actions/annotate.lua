@@ -106,6 +106,7 @@ return {
     end
     for _index_0 = 1, #args do
       local fname = args[_index_0]
+      print("Annotating " .. tostring(fname))
       annotate_model(config, fname)
     end
   end
