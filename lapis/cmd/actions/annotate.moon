@@ -36,6 +36,18 @@ extract_header = (config, model) ->
 
   table.concat filtered, "\n"
 
+extract_header2 = (config, model) ->
+  table_name = model\table_name!
+  schema = exec "psql -U postgres #{assert config.postgres.database, "missing db"} -c '\\d #{table_name}'"
+  lines = for line in schema\gmatch "[^\n]+"
+    "-- #{line}"
+
+  table.insert lines, 1, "--"
+  table.insert lines, 1, "-- Generated schema dump: (do not edit)"
+  table.insert lines, "--"
+
+  table.concat lines, "\n"
+
 annotate_model = (config, fname) ->
   source_f = io.open fname, "r"
   source = source_f\read "*all"
@@ -47,7 +59,7 @@ annotate_model = (config, fname) ->
   else
     assert loadfile(fname)!
 
-  header = extract_header config, model
+  header = extract_header2 config, model
 
   source_with_header = if source\match "%-%- Generated .-\nclass "
     source\gsub "%-%- Generated .-\nclass ", "#{header}\nclass ", 1

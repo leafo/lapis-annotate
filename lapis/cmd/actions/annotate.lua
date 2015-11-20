@@ -69,6 +69,25 @@ extract_header = function(config, model)
   table.insert(filtered, "--")
   return table.concat(filtered, "\n")
 end
+local extract_header2
+extract_header2 = function(config, model)
+  local table_name = model:table_name()
+  local schema = exec("psql -U postgres " .. tostring(assert(config.postgres.database, "missing db")) .. " -c '\\d " .. tostring(table_name) .. "'")
+  local lines
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for line in schema:gmatch("[^\n]+") do
+      _accum_0[_len_0] = "-- " .. tostring(line)
+      _len_0 = _len_0 + 1
+    end
+    lines = _accum_0
+  end
+  table.insert(lines, 1, "--")
+  table.insert(lines, 1, "-- Generated schema dump: (do not edit)")
+  table.insert(lines, "--")
+  return table.concat(lines, "\n")
+end
 local annotate_model
 annotate_model = function(config, fname)
   local source_f = io.open(fname, "r")
@@ -81,7 +100,7 @@ annotate_model = function(config, fname)
   else
     model = assert(loadfile(fname)())
   end
-  local header = extract_header(config, model)
+  local header = extract_header2(config, model)
   local source_with_header
   if source:match("%-%- Generated .-\nclass ") then
     source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
