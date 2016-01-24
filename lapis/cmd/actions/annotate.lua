@@ -1,7 +1,5 @@
 local default_environment
 default_environment = require("lapis.cmd.util").default_environment
-local parse_flags
-parse_flags = require("lapis.cmd.util").parse_flags
 local exec
 exec = function(cmd)
   local f = io.popen(cmd)
@@ -78,7 +76,7 @@ extract_header2 = function(config, model)
     local _accum_0 = { }
     local _len_0 = 1
     for line in schema:gmatch("[^\n]+") do
-      _accum_0[_len_0] = "-- " .. tostring(line)
+      _accum_0[_len_0] = "-- " .. tostring(line:gsub("%s+^", ""))
       _len_0 = _len_0 + 1
     end
     lines = _accum_0
@@ -100,7 +98,7 @@ annotate_model = function(config, fname)
   else
     model = assert(loadfile(fname)())
   end
-  local header = extract_header2(config, model)
+  local header = extract_header(config, model)
   local source_with_header
   if source:match("%-%- Generated .-\nclass ") then
     source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
@@ -115,10 +113,10 @@ return {
   name = "annotate",
   usage = "annotate models/model1.moon models/model2.moon ...",
   help = "annotate a model with schema",
-  function(...)
-    local flags, args = parse_flags({
+  function(flags, ...)
+    local args = {
       ...
-    })
+    }
     local config = require("lapis.config").get()
     if not (next(args)) then
       error("no models passed to annotate")

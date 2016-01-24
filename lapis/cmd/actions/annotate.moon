@@ -1,5 +1,4 @@
 import default_environment from require "lapis.cmd.util"
-import parse_flags from require "lapis.cmd.util"
 
 exec = (cmd) ->
   f = io.popen cmd
@@ -40,7 +39,7 @@ extract_header2 = (config, model) ->
   table_name = model\table_name!
   schema = exec "psql -U postgres #{assert config.postgres.database, "missing db"} -c '\\d #{table_name}'"
   lines = for line in schema\gmatch "[^\n]+"
-    "-- #{line}"
+    "-- #{line\gsub "%s+^", ""}"
 
   table.insert lines, 1, "--"
   table.insert lines, 1, "-- Generated schema dump: (do not edit)"
@@ -59,7 +58,7 @@ annotate_model = (config, fname) ->
   else
     assert loadfile(fname)!
 
-  header = extract_header2 config, model
+  header = extract_header config, model
 
   source_with_header = if source\match "%-%- Generated .-\nclass "
     source\gsub "%-%- Generated .-\nclass ", "#{header}\nclass ", 1
@@ -75,8 +74,8 @@ annotate_model = (config, fname) ->
   usage: "annotate models/model1.moon models/model2.moon ..."
   help: "annotate a model with schema"
 
-  (...) ->
-    flags, args = parse_flags { ... }
+  (flags, ...) ->
+    args = { ... }
     config = require("lapis.config").get!
 
     unless next args
