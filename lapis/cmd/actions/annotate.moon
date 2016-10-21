@@ -74,7 +74,7 @@ annotate_model = (config, fname) ->
   usage: "annotate models/model1.moon models/model2.moon ..."
   help: "annotate a model with schema"
 
-  (flags, ...) ->
+  (flags, ...) =>
     args = { ... }
     config = require("lapis.config").get!
 

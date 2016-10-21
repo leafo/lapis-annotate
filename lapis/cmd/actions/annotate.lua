@@ -113,7 +113,7 @@ return {
   name = "annotate",
   usage = "annotate models/model1.moon models/model2.moon ...",
   help = "annotate a model with schema",
-  function(flags, ...)
+  function(self, flags, ...)
     local args = {
       ...
     }
