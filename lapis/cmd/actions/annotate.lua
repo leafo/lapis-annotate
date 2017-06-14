@@ -12,7 +12,13 @@ end
 local extract_header
 extract_header = function(config, model)
   local table_name = model:table_name()
-  local schema = exec("pg_dump --schema-only -U postgres -t " .. tostring(table_name) .. " " .. tostring(assert(config.postgres.database, "missing db")))
+  local postgres = {
+    host = assert(config.postgres.host, "missing host"),
+    user = assert(config.postgres.user, "missing user"),
+    database = assert(config.postgres.database, "missing db")
+  }
+  local password = "PGPASSWORD=\"" .. tostring(config.postgres.password) .. "\" " or ""
+  local schema = exec(tostring(password) .. "pg_dump --schema-only -h " .. tostring(postgres.host) .. " -U " .. tostring(postgres.user) .. " -t " .. tostring(table_name) .. " " .. tostring(postgres.database))
   local in_block = false
   local filtered
   do

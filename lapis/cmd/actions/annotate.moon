@@ -7,7 +7,13 @@ exec = (cmd) ->
 
 extract_header = (config, model) ->
   table_name = model\table_name!
-  schema = exec "pg_dump --schema-only -U postgres -t #{table_name} #{assert config.postgres.database, "missing db"}"
+  postgres =
+    host: assert config.postgres.host, "missing host"
+    user: assert config.postgres.user, "missing user"
+    database: assert config.postgres.database, "missing db"
+
+  password = "PGPASSWORD=\"#{config.postgres.password}\" " or ""
+  schema = exec "#{password}pg_dump --schema-only -h #{postgres.host} -U #{postgres.user} -t #{table_name} #{postgres.database}"
 
   in_block = false
 
