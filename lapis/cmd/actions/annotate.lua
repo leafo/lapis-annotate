@@ -1,5 +1,9 @@
 local default_environment
 default_environment = require("lapis.cmd.util").default_environment
+local shell_escape
+shell_escape = function(str)
+  return "'" .. tostring(str:gsub("'", "''")) .. "'"
+end
 local exec
 exec = function(cmd)
   local f = io.popen(cmd)
@@ -12,13 +16,30 @@ end
 local extract_header
 extract_header = function(config, model)
   local table_name = model:table_name()
-  local postgres = {
-    host = assert(config.postgres.host, "missing host"),
-    user = assert(config.postgres.user, "missing user"),
-    database = assert(config.postgres.database, "missing db")
-  }
-  local password = "PGPASSWORD=\"" .. tostring(config.postgres.password) .. "\" " or ""
-  local schema = exec(tostring(password) .. "pg_dump --schema-only -h " .. tostring(postgres.host) .. " -U " .. tostring(postgres.user) .. " -t " .. tostring(table_name) .. " " .. tostring(postgres.database))
+  local database = assert(config.postgres.database, "missing db")
+  local command = { }
+  do
+    local password = config.postgres.password
+    if password then
+      table.insert(command, "PGPASSWORD=" .. tostring(shell_escape(password)))
+    end
+  end
+  table.insert(command, "pg_dump --schema-only")
+  do
+    local host = config.postgres.host
+    if host then
+      table.insert(command, "-h " .. tostring(shell_escape(host)))
+    end
+  end
+  do
+    local user = config.postgres.user
+    if user then
+      table.insert(command, "-U " .. tostring(shell_escape(user)))
+    end
+  end
+  table.insert(command, "-t " .. tostring(shell_escape(table_name)))
+  table.insert(command, shell_escape(database))
+  local schema = exec(table.concat(command, " "))
   local in_block = false
   local filtered
   do

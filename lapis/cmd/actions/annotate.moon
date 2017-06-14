@@ -1,5 +1,8 @@
 import default_environment from require "lapis.cmd.util"
 
+shell_escape = (str) ->
+  "'#{str\gsub "'", "''"}'"
+
 exec = (cmd) ->
   f = io.popen cmd
   with f\read("*all")\gsub "%s*$", ""
@@ -7,13 +10,25 @@ exec = (cmd) ->
 
 extract_header = (config, model) ->
   table_name = model\table_name!
-  postgres =
-    host: assert config.postgres.host, "missing host"
-    user: assert config.postgres.user, "missing user"
-    database: assert config.postgres.database, "missing db"
+  database = assert config.postgres.database, "missing db"
 
-  password = "PGPASSWORD=\"#{config.postgres.password}\" " or ""
-  schema = exec "#{password}pg_dump --schema-only -h #{postgres.host} -U #{postgres.user} -t #{table_name} #{postgres.database}"
+  command = { }
+
+  if password = config.postgres.password
+    table.insert command, "PGPASSWORD=#{shell_escape password}"
+
+  table.insert command, "pg_dump --schema-only"
+
+  if host = config.postgres.host
+    table.insert command, "-h #{shell_escape host}"
+
+  if user = config.postgres.user
+    table.insert command, "-U #{shell_escape user}"
+
+  table.insert command, "-t #{shell_escape table_name}"
+  table.insert command, shell_escape database
+
+  schema = exec table.concat command, " "
 
   in_block = false
 
