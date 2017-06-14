@@ -55,5 +55,7 @@ class UserIpAddresses extends Model
 
 Only supports MoonScript and PostgreSQL at the moment
 
+## Changes
 
-
+* **2017-06-14** `1.1.0` Add support for db user/password (Skiouros), add shell escaping
+* **2016-01-23** `1.0.0` Initial release
