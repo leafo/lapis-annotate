@@ -40,6 +40,7 @@ extract_header = (config, model) ->
     continue if line\match "^%-%-"
     continue if line\match "^SET"
     continue if line\match "^ALTER SEQUENCE"
+    continue if line\match "^SELECT"
 
     if line\match("^ALTER TABLE" ) and not line\match("^ALTER TABLE ONLY") or line\match "nextval"
       continue

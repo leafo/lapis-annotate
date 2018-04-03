@@ -69,6 +69,10 @@ extract_header = function(config, model)
           _continue_0 = true
           break
         end
+        if line:match("^SELECT") then
+          _continue_0 = true
+          break
+        end
         if line:match("^ALTER TABLE") and not line:match("^ALTER TABLE ONLY") or line:match("nextval") then
           _continue_0 = true
           break
