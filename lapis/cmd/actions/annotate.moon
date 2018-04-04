@@ -8,6 +8,8 @@ exec = (cmd) ->
   with f\read("*all")\gsub "%s*$", ""
     f\close!
 
+DEFAULT_SCHEMA = "public"
+
 extract_header = (config, model) ->
   table_name = model\table_name!
   database = assert config.postgres.database, "missing db"
@@ -41,6 +43,8 @@ extract_header = (config, model) ->
     continue if line\match "^SET"
     continue if line\match "^ALTER SEQUENCE"
     continue if line\match "^SELECT"
+
+    line = line\gsub "#{DEFAULT_SCHEMA}%.#{table_name}", table_name
 
     if line\match("^ALTER TABLE" ) and not line\match("^ALTER TABLE ONLY") or line\match "nextval"
       continue

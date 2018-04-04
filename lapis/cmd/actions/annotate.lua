@@ -13,6 +13,7 @@ exec = function(cmd)
     return _with_0
   end
 end
+local DEFAULT_SCHEMA = "public"
 local extract_header
 extract_header = function(config, model)
   local table_name = model:table_name()
@@ -73,6 +74,7 @@ extract_header = function(config, model)
           _continue_0 = true
           break
         end
+        line = line:gsub(tostring(DEFAULT_SCHEMA) .. "%." .. tostring(table_name), table_name)
         if line:match("^ALTER TABLE") and not line:match("^ALTER TABLE ONLY") or line:match("nextval") then
           _continue_0 = true
           break
