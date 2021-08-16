@@ -69,6 +69,8 @@ After:
 
 
 ```lua
+local Model = require("lapis.db.model").Model
+
 -- Generated schema dump: (do not edit)
 --
 -- CREATE TABLE user_ip_addresses (
@@ -82,20 +84,23 @@ After:
 -- CREATE INDEX user_ip_addresses_ip_idx ON user_ip_addresses USING btree (ip);
 -- End user_ip_addresses schema
 --
-
-local Model = require("lapis.db.model").Model
-
-local UserIpAddresses = Model:extend('', {
+local UserIpAddresses = Model:extend('user_ip_addresses ', {
   timestamp = true,
   primary_key = {"user_id", "ip"}
 })
+
+return UserIpAddress
 ```
 ## Notes
 
 Only supports PostgreSQL at the moment.
 
 When using MoonScript, annotations are placed before the `class` line.
-When using Lua, annotations are placed at the top of the file.
+
+### Lua Mode
+You must return your model instance from the Lua file. `lapis-annotate` expects
+a camelcase variable name for each model, but if not found it will place annotations
+at the top of the lua file.
 
 ## Changes
 
