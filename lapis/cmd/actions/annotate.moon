@@ -1,4 +1,5 @@
 import default_environment from require "lapis.cmd.util"
+import camelize from require "lapis.util"
 
 shell_escape = (str) ->
   "'#{str\gsub "'", "''"}'"
@@ -88,12 +89,12 @@ annotate_model = (config, fname) ->
     assert loadfile(fname)!
 
   if fname\match ".lua$"
-    start_of_class = ""
+    start_of_class = source\match("local #{camelize model\table_name!}") or ""
 
   header = extract_header config, model
 
   table_name = model\table_name!
-  annotation_content = "%-%- Generated .*\n%-%- End #{table_name} schema\n%-%-\n#{start_of_class}"
+  annotation_content = "%-%- Generated .-\n%-%- End #{table_name} schema\n%-%-\n#{start_of_class}"
   source_with_header = if source\match annotation_content
     source\gsub annotation_content, "#{header}\n#{start_of_class}", 1
   else

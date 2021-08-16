@@ -1,5 +1,7 @@
 local default_environment
 default_environment = require("lapis.cmd.util").default_environment
+local camelize
+camelize = require("lapis.util").camelize
 local shell_escape
 shell_escape = function(str)
   return "'" .. tostring(str:gsub("'", "''")) .. "'"
@@ -135,11 +137,11 @@ annotate_model = function(config, fname)
     model = assert(loadfile(fname)())
   end
   if fname:match(".lua$") then
-    start_of_class = ""
+    start_of_class = source:match("local " .. tostring(camelize(model:table_name()))) or ""
   end
   local header = extract_header(config, model)
   local table_name = model:table_name()
-  local annotation_content = "%-%- Generated .*\n%-%- End " .. tostring(table_name) .. " schema\n%-%-\n" .. tostring(start_of_class)
+  local annotation_content = "%-%- Generated .-\n%-%- End " .. tostring(table_name) .. " schema\n%-%-\n" .. tostring(start_of_class)
   local source_with_header
   if source:match(annotation_content) then
     source_with_header = source:gsub(annotation_content, tostring(header) .. "\n" .. tostring(start_of_class), 1)
