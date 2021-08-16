@@ -16,7 +16,8 @@ $ luarocks install lapis-annotate
 $ lapis annotate models/my_model.moon
 ```
 
-Before: 
+### Moonscript
+Before:
 
 ```moon
 import Model from require "lapis.db.model"
@@ -43,6 +44,7 @@ import Model from require "lapis.db.model"
 -- ALTER TABLE ONLY user_ip_addresses
 --   ADD CONSTRAINT user_ip_addresses_pkey PRIMARY KEY (user_id, ip);
 -- CREATE INDEX user_ip_addresses_ip_idx ON user_ip_addresses USING btree (ip);
+-- End user_ip_addresses schema
 --
 class UserIpAddresses extends Model
   @timestamp: true
@@ -51,9 +53,54 @@ class UserIpAddresses extends Model
 
 ```
 
+### Lua
+Before:
+
+```Lua
+local Model = require("lapis.db.model").Model
+
+local UserIpAddresses = Model:extend('user_ip_addresses', {
+  timestamp = true,
+  primary_key = {"user_id", "ip"}
+})
+```
+
+After:
+
+
+```lua
+local Model = require("lapis.db.model").Model
+
+-- Generated schema dump: (do not edit)
+--
+-- CREATE TABLE user_ip_addresses (
+--   user_id integer NOT NULL,
+--   ip character varying(255) NOT NULL,
+--   created_at timestamp without time zone NOT NULL,
+--   updated_at timestamp without time zone NOT NULL
+-- );
+-- ALTER TABLE ONLY user_ip_addresses
+--   ADD CONSTRAINT user_ip_addresses_pkey PRIMARY KEY (user_id, ip);
+-- CREATE INDEX user_ip_addresses_ip_idx ON user_ip_addresses USING btree (ip);
+-- End user_ip_addresses schema
+--
+local UserIpAddresses = Model:extend('user_ip_addresses ', {
+  timestamp = true,
+  primary_key = {"user_id", "ip"}
+})
+
+return UserIpAddress
+```
 ## Notes
 
-Only supports MoonScript and PostgreSQL at the moment
+Only supports PostgreSQL at the moment.
+
+When using MoonScript, annotations are placed before the `class` line.
+
+### Lua Mode
+You must return your model instance from the Lua file. `lapis-annotate` expects
+a camelcase variable name for each model, but if not found it will place annotations
+at the top of the lua file.
 
 ## Changes
 
