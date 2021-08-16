@@ -89,7 +89,7 @@ annotate_model = (config, fname) ->
     assert loadfile(fname)!
 
   if fname\match ".lua$"
-    start_of_class = source\match("local #{camelize model\table_name!}") or ""
+    start_of_class = source\match("local #{camelize model\table_name!} ") or ""
 
   header = extract_header config, model
 

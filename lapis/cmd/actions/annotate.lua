@@ -137,7 +137,7 @@ annotate_model = function(config, fname)
     model = assert(loadfile(fname)())
   end
   if fname:match(".lua$") then
-    start_of_class = source:match("local " .. tostring(camelize(model:table_name()))) or ""
+    start_of_class = source:match("local " .. tostring(camelize(model:table_name())) .. " ") or ""
   end
   local header = extract_header(config, model)
   local table_name = model:table_name()
