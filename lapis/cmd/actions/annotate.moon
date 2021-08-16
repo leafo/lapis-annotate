@@ -57,6 +57,7 @@ extract_header = (config, model) ->
 
   table.insert filtered, 1, "--"
   table.insert filtered, 1, "-- Generated schema dump: (do not edit)"
+  table.insert filtered, "-- End #{table_name} schema"
   table.insert filtered, "--"
 
   table.concat filtered, "\n"
@@ -69,6 +70,7 @@ extract_header2 = (config, model) ->
 
   table.insert lines, 1, "--"
   table.insert lines, 1, "-- Generated schema dump: (do not edit)"
+  table.insert lines, "-- End #{table_name} schema"
   table.insert lines, "--"
 
   table.concat lines, "\n"
@@ -77,6 +79,7 @@ annotate_model = (config, fname) ->
   source_f = io.open fname, "r"
   source = source_f\read "*all"
   source_f\close!
+  start_of_class = "class "
 
   model = if fname\match ".moon$"
     moonscript = require "moonscript.base"
@@ -84,12 +87,17 @@ annotate_model = (config, fname) ->
   else
     assert loadfile(fname)!
 
+  if fname\match ".lua$"
+    start_of_class = ""
+
   header = extract_header config, model
 
-  source_with_header = if source\match "%-%- Generated .-\nclass "
-    source\gsub "%-%- Generated .-\nclass ", "#{header}\nclass ", 1
+  table_name = model\table_name!
+  annotation_content = "%-%- Generated .*\n%-%- End #{table_name} schema\n%-%-\n#{start_of_class}"
+  source_with_header = if source\match annotation_content
+    source\gsub annotation_content, "#{header}\n#{start_of_class}", 1
   else
-    source\gsub "class ", "#{header}\nclass ", 1
+    source\gsub start_of_class, "#{header}\n#{start_of_class}", 1
 
   source_out = io.open fname, "w"
   source_out\write source_with_header

@@ -97,6 +97,7 @@ extract_header = function(config, model)
   end
   table.insert(filtered, 1, "--")
   table.insert(filtered, 1, "-- Generated schema dump: (do not edit)")
+  table.insert(filtered, "-- End " .. tostring(table_name) .. " schema")
   table.insert(filtered, "--")
   return table.concat(filtered, "\n")
 end
@@ -116,6 +117,7 @@ extract_header2 = function(config, model)
   end
   table.insert(lines, 1, "--")
   table.insert(lines, 1, "-- Generated schema dump: (do not edit)")
+  table.insert(lines, "-- End " .. tostring(table_name) .. " schema")
   table.insert(lines, "--")
   return table.concat(lines, "\n")
 end
@@ -124,6 +126,7 @@ annotate_model = function(config, fname)
   local source_f = io.open(fname, "r")
   local source = source_f:read("*all")
   source_f:close()
+  local start_of_class = "class "
   local model
   if fname:match(".moon$") then
     local moonscript = require("moonscript.base")
@@ -131,12 +134,17 @@ annotate_model = function(config, fname)
   else
     model = assert(loadfile(fname)())
   end
+  if fname:match(".lua$") then
+    start_of_class = ""
+  end
   local header = extract_header(config, model)
+  local table_name = model:table_name()
+  local annotation_content = "%-%- Generated .*\n%-%- End " .. tostring(table_name) .. " schema\n%-%-\n" .. tostring(start_of_class)
   local source_with_header
-  if source:match("%-%- Generated .-\nclass ") then
-    source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
+  if source:match(annotation_content) then
+    source_with_header = source:gsub(annotation_content, tostring(header) .. "\n" .. tostring(start_of_class), 1)
   else
-    source_with_header = source:gsub("class ", tostring(header) .. "\nclass ", 1)
+    source_with_header = source:gsub(start_of_class, tostring(header) .. "\n" .. tostring(start_of_class), 1)
   end
   local source_out = io.open(fname, "w")
   source_out:write(source_with_header)
