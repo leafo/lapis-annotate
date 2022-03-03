@@ -51,6 +51,10 @@ class UserIpAddresses extends Model
 
 ```
 
+## Arguments
+
+* `--preload-module=MODULE_NAME`: load the named module with `require` before initializing config
+
 ## Notes
 
 Only supports MoonScript and PostgreSQL at the moment
