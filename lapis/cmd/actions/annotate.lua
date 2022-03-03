@@ -147,6 +147,13 @@ return {
   usage = "annotate models/model1.moon models/model2.moon ...",
   help = "annotate a model with schema",
   function(self, flags, ...)
+    do
+      local mod_name = flags["preload-module"]
+      if mod_name then
+        assert(type(mod_name) == "string", "preload-module must be a astring")
+        require(mod_name)
+      end
+    end
     local args = {
       ...
     }

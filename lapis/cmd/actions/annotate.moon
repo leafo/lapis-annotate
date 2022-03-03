@@ -101,6 +101,11 @@ annotate_model = (config, fname) ->
   help: "annotate a model with schema"
 
   (flags, ...) =>
+
+    if mod_name = flags["preload-module"]
+      assert type(mod_name) == "string", "preload-module must be a astring"
+      require(mod_name)
+
     args = { ... }
     config = require("lapis.config").get!
 
