@@ -41,13 +41,12 @@ build_command = function(cmd, config)
   table.insert(command, shell_escape(database))
   return table.concat(command, " ")
 end
-local extract_header_sql
-extract_header_sql = function(config, model)
+local extract_schema_sql
+extract_schema_sql = function(config, model)
   local table_name = model:table_name()
   local schema = exec(build_command("pg_dump --schema-only -t " .. tostring(shell_escape(table_name)), config))
   local in_block = false
-  local filtered
-  do
+  return (function()
     local _accum_0 = { }
     local _len_0 = 1
     for line in schema:gmatch("[^\n]+") do
@@ -88,7 +87,7 @@ extract_header_sql = function(config, model)
           _continue_0 = true
           break
         end
-        local _value_0 = "-- " .. line:gsub("    ", "  ")
+        local _value_0 = line:gsub("    ", "  ")
         _accum_0[_len_0] = _value_0
         _len_0 = _len_0 + 1
         _continue_0 = true
@@ -97,31 +96,22 @@ extract_header_sql = function(config, model)
         break
       end
     end
-    filtered = _accum_0
-  end
-  table.insert(filtered, 1, "--")
-  table.insert(filtered, 1, "-- Generated schema dump: (do not edit)")
-  table.insert(filtered, "--")
-  return table.concat(filtered, "\n")
+    return _accum_0
+  end)()
 end
-local extract_header_table
-extract_header_table = function(config, model)
+local extract_schema_table
+extract_schema_table = function(config, model)
   local table_name = model:table_name()
   local schema = exec(build_command("psql -c " .. tostring(shell_escape("\\d " .. tostring(table_name))), config))
-  local lines
-  do
+  return (function()
     local _accum_0 = { }
     local _len_0 = 1
     for line in schema:gmatch("[^\n]+") do
-      _accum_0[_len_0] = "-- " .. tostring(line:gsub("%s+$", ""))
+      _accum_0[_len_0] = line:gsub("%s+$", "")
       _len_0 = _len_0 + 1
     end
-    lines = _accum_0
-  end
-  table.insert(lines, 1, "--")
-  table.insert(lines, 1, "-- Generated schema dump: (do not edit)")
-  table.insert(lines, "--")
-  return table.concat(lines, "\n")
+    return _accum_0
+  end)()
 end
 local annotate_model
 annotate_model = function(config, fname, options)
@@ -138,17 +128,24 @@ annotate_model = function(config, fname, options)
   else
     model = assert(loadfile(fname)())
   end
-  local header
+  local header_lines
   local _exp_0 = options.format
   if "sql" == _exp_0 then
-    header = extract_header_sql(config, model)
+    header_lines = extract_schema_sql(config, model)
   elseif "table" == _exp_0 then
-    header = extract_header_table(config, model)
+    header_lines = extract_schema_table(config, model)
   end
   if options.print then
-    print(header)
+    print(table.concat(header_lines, "\n"))
     return 
   end
+  table.insert(header_lines, 1, "")
+  table.insert(header_lines, 1, "Generated schema dump: (do not edit)")
+  table.insert(header_lines, "")
+  for idx, line in ipairs(header_lines) do
+    header_lines[idx] = ("-- " .. tostring(line)):gsub("%s+$", "")
+  end
+  local header = table.concat(header_lines, "\n")
   local source_with_header
   if source:match("%-%- Generated .-\nclass ") then
     source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
@@ -171,7 +168,7 @@ return {
         "sql",
         "table"
       }):default("sql")
-      _with_0:flag("--print", "Print the output instead of editing the model files")
+      _with_0:flag("--print -p", "Print the output instead of editing the model files")
       return _with_0
     end
   end,

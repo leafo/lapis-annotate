@@ -28,14 +28,14 @@ build_command = (cmd, config) ->
   table.insert command, shell_escape database
   table.concat command, " "
 
-extract_header_sql = (config, model) ->
+extract_schema_sql = (config, model) ->
   table_name = model\table_name!
 
   schema = exec build_command "pg_dump --schema-only -t #{shell_escape table_name}", config
 
   in_block = false
 
-  filtered = for line in schema\gmatch "[^\n]+"
+  return for line in schema\gmatch "[^\n]+"
     if in_block
       in_block = false unless line\match "^%s"
       continue if in_block
@@ -54,26 +54,15 @@ extract_header_sql = (config, model) ->
       in_block = true
       continue
 
-    "-- " .. line\gsub "    ", "  "
+    line\gsub "    ", "  "
 
-  table.insert filtered, 1, "--"
-  table.insert filtered, 1, "-- Generated schema dump: (do not edit)"
-  table.insert filtered, "--"
 
-  table.concat filtered, "\n"
-
-extract_header_table = (config, model) ->
+extract_schema_table = (config, model) ->
   table_name = model\table_name!
   schema = exec build_command "psql -c #{shell_escape "\\d #{table_name}"}", config
 
-  lines = for line in schema\gmatch "[^\n]+"
-    "-- #{line\gsub "%s+$", ""}"
-
-  table.insert lines, 1, "--"
-  table.insert lines, 1, "-- Generated schema dump: (do not edit)"
-  table.insert lines, "--"
-
-  table.concat lines, "\n"
+  return for line in schema\gmatch "[^\n]+"
+    line\gsub("%s+$", "")
 
 annotate_model = (config, fname, options={}) ->
   source_f = assert io.open fname, "r"
@@ -86,15 +75,25 @@ annotate_model = (config, fname, options={}) ->
   else
     assert loadfile(fname)!
 
-  header = switch options.format
+  header_lines = switch options.format
     when "sql"
-      extract_header_sql config, model
+      extract_schema_sql config, model
     when "table"
-      extract_header_table config, model
+      extract_schema_table config, model
 
   if options.print
-    print header
+    print table.concat header_lines, "\n"
     return
+
+  -- turn it into a Lua/Moon comment
+  table.insert header_lines, 1, ""
+  table.insert header_lines, 1, "Generated schema dump: (do not edit)"
+  table.insert header_lines, ""
+
+  for idx, line in ipairs header_lines
+    header_lines[idx] = "-- #{line}"\gsub("%s+$", "")
+
+  header = table.concat header_lines, "\n"
 
   -- NOTE: this only works on moonscript for files that haven't been already processed
   source_with_header = if source\match "%-%- Generated .-\nclass "
@@ -115,7 +114,7 @@ parsed_args = false
       \argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)")\args "+"
       \option("--preload-module", "Module to require before annotating a model")\argname "<name>"
       \option("--format", "What dump format to use")\choices({"sql", "table"})\default "sql"
-      \flag("--print", "Print the output instead of editing the model files")
+      \flag("--print -p", "Print the output instead of editing the model files")
 
   (args, lapis_args) =>
     assert parsed_args,
