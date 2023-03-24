@@ -14,18 +14,18 @@ exec = function(cmd)
   end
 end
 local DEFAULT_SCHEMA = "public"
-local extract_header
-extract_header = function(config, model)
-  local table_name = model:table_name()
-  local database = assert(config.postgres.database, "missing db")
-  local command = { }
+local build_command
+build_command = function(cmd, config)
+  local database = assert(config.postgres and config.postgres.database, "missing postgres database configuration")
+  local command = {
+    cmd
+  }
   do
     local password = config.postgres.password
     if password then
-      table.insert(command, "PGPASSWORD=" .. tostring(shell_escape(password)))
+      table.insert(1, command, "PGPASSWORD=" .. tostring(shell_escape(password)))
     end
   end
-  table.insert(command, "pg_dump --schema-only")
   do
     local host = config.postgres.host
     if host then
@@ -38,9 +38,13 @@ extract_header = function(config, model)
       table.insert(command, "-U " .. tostring(shell_escape(user)))
     end
   end
-  table.insert(command, "-t " .. tostring(shell_escape(table_name)))
   table.insert(command, shell_escape(database))
-  local schema = exec(table.concat(command, " "))
+  return table.concat(command, " ")
+end
+local extract_header_sql
+extract_header_sql = function(config, model)
+  local table_name = model:table_name()
+  local schema = exec(build_command("pg_dump --schema-only -t " .. tostring(shell_escape(table_name)), config))
   local in_block = false
   local filtered
   do
@@ -100,16 +104,16 @@ extract_header = function(config, model)
   table.insert(filtered, "--")
   return table.concat(filtered, "\n")
 end
-local extract_header2
-extract_header2 = function(config, model)
+local extract_header_table
+extract_header_table = function(config, model)
   local table_name = model:table_name()
-  local schema = exec("psql -U postgres " .. tostring(assert(config.postgres.database, "missing db")) .. " -c '\\d " .. tostring(table_name) .. "'")
+  local schema = exec(build_command("psql -c " .. tostring(shell_escape("\\d " .. tostring(table_name))), config))
   local lines
   do
     local _accum_0 = { }
     local _len_0 = 1
     for line in schema:gmatch("[^\n]+") do
-      _accum_0[_len_0] = "-- " .. tostring(line:gsub("%s+^", ""))
+      _accum_0[_len_0] = "-- " .. tostring(line:gsub("%s+$", ""))
       _len_0 = _len_0 + 1
     end
     lines = _accum_0
@@ -120,7 +124,10 @@ extract_header2 = function(config, model)
   return table.concat(lines, "\n")
 end
 local annotate_model
-annotate_model = function(config, fname)
+annotate_model = function(config, fname, options)
+  if options == nil then
+    options = { }
+  end
   local source_f = assert(io.open(fname, "r"))
   local source = assert(source_f:read("*all"))
   source_f:close()
@@ -131,7 +138,17 @@ annotate_model = function(config, fname)
   else
     model = assert(loadfile(fname)())
   end
-  local header = extract_header(config, model)
+  local header
+  local _exp_0 = options.format
+  if "sql" == _exp_0 then
+    header = extract_header_sql(config, model)
+  elseif "table" == _exp_0 then
+    header = extract_header_table(config, model)
+  end
+  if options.print then
+    print(header)
+    return 
+  end
   local source_with_header
   if source:match("%-%- Generated .-\nclass ") then
     source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
@@ -150,6 +167,11 @@ return {
       local _with_0 = require("argparse")("lapis annotate", "Extract schema information from database table to comment model")
       _with_0:argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)"):args("+")
       _with_0:option("--preload-module", "Module to require before annotating a model"):argname("<name>")
+      _with_0:option("--format", "What dump format to use"):choices({
+        "sql",
+        "table"
+      }):default("sql")
+      _with_0:flag("--print", "Print the output instead of editing the model files")
       return _with_0
     end
   end,
@@ -166,8 +188,8 @@ return {
     local _list_0 = args.files
     for _index_0 = 1, #_list_0 do
       local fname = _list_0[_index_0]
-      print("Annotating " .. tostring(fname))
-      annotate_model(config, fname)
+      io.stderr:write("Annotating " .. tostring(fname) .. "\n")
+      annotate_model(config, fname, args)
     end
   end
 }
