@@ -142,8 +142,10 @@ annotate_model = function(config, fname)
   source_out:write(source_with_header)
   return source_out:close()
 end
+local parsed_args = false
 return {
   argparser = function()
+    parsed_args = true
     do
       local _with_0 = require("argparse")("lapis annotate", "Extract schema information from database table to comment model")
       _with_0:argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)"):args("+")
@@ -152,6 +154,7 @@ return {
     end
   end,
   function(self, args, lapis_args)
+    assert(parsed_args, "The version of Lapis you are using does not support this version of lapis-annotate. Please upgrade Lapis ≥ v1.14.0")
     do
       local mod_name = args.preload_module
       if mod_name then

@@ -95,13 +95,19 @@ annotate_model = (config, fname) ->
   source_out\write source_with_header
   source_out\close!
 
+parsed_args = false
+
 {
   argparser: ->
+    parsed_args = true
     with require("argparse") "lapis annotate", "Extract schema information from database table to comment model"
       \argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)")\args "+"
       \option("--preload-module", "Module to require before annotating a model")\argname "<name>"
 
   (args, lapis_args) =>
+    assert parsed_args,
+      "The version of Lapis you are using does not support this version of lapis-annotate. Please upgrade Lapis ≥ v1.14.0"
+
     if mod_name = args.preload_module
       assert type(mod_name) == "string", "preload-module must be a astring"
       require(mod_name)
