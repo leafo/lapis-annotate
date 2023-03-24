@@ -74,8 +74,8 @@ extract_header2 = (config, model) ->
   table.concat lines, "\n"
 
 annotate_model = (config, fname) ->
-  source_f = io.open fname, "r"
-  source = source_f\read "*all"
+  source_f = assert io.open fname, "r"
+  source = assert source_f\read "*all"
   source_f\close!
 
   model = if fname\match ".moon$"
@@ -96,24 +96,19 @@ annotate_model = (config, fname) ->
   source_out\close!
 
 {
-  name: "annotate"
-  usage: "annotate models/model1.moon models/model2.moon ..."
-  help: "annotate a model with schema"
+  argparser: ->
+    with require("argparse") "lapis annotate", "Extract schema information from database table to comment model"
+      \argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)")\args "+"
+      \option("--preload-module", "Module to require before annotating a model")\argname "<name>"
 
-  (flags, ...) =>
-
-    if mod_name = flags["preload-module"]
+  (args, lapis_args) =>
+    if mod_name = args.preload_module
       assert type(mod_name) == "string", "preload-module must be a astring"
       require(mod_name)
 
-    args = { ... }
-    config = require("lapis.config").get!
+    config = @get_config lapis_args.environment
 
-    unless next args
-      error "no models passed to annotate"
-
-    for fname in *args
+    for fname in *args.files
       print "Annotating #{fname}"
       annotate_model config, fname
-
 }

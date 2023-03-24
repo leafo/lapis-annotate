@@ -121,8 +121,8 @@ extract_header2 = function(config, model)
 end
 local annotate_model
 annotate_model = function(config, fname)
-  local source_f = io.open(fname, "r")
-  local source = source_f:read("*all")
+  local source_f = assert(io.open(fname, "r"))
+  local source = assert(source_f:read("*all"))
   source_f:close()
   local model
   if fname:match(".moon$") then
@@ -143,26 +143,26 @@ annotate_model = function(config, fname)
   return source_out:close()
 end
 return {
-  name = "annotate",
-  usage = "annotate models/model1.moon models/model2.moon ...",
-  help = "annotate a model with schema",
-  function(self, flags, ...)
+  argparser = function()
     do
-      local mod_name = flags["preload-module"]
+      local _with_0 = require("argparse")("lapis annotate", "Extract schema information from database table to comment model")
+      _with_0:argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)"):args("+")
+      _with_0:option("--preload-module", "Module to require before annotating a model"):argname("<name>")
+      return _with_0
+    end
+  end,
+  function(self, args, lapis_args)
+    do
+      local mod_name = args.preload_module
       if mod_name then
         assert(type(mod_name) == "string", "preload-module must be a astring")
         require(mod_name)
       end
     end
-    local args = {
-      ...
-    }
-    local config = require("lapis.config").get()
-    if not (next(args)) then
-      error("no models passed to annotate")
-    end
-    for _index_0 = 1, #args do
-      local fname = args[_index_0]
+    local config = self:get_config(lapis_args.environment)
+    local _list_0 = args.files
+    for _index_0 = 1, #_list_0 do
+      local fname = _list_0[_index_0]
       print("Annotating " .. tostring(fname))
       annotate_model(config, fname)
     end
