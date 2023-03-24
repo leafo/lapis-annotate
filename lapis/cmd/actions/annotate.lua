@@ -113,6 +113,21 @@ extract_schema_table = function(config, model)
     return _accum_0
   end)()
 end
+local replace_header
+replace_header = function(input, replacement)
+  local P, S, Cs
+  do
+    local _obj_0 = require("lpeg")
+    P, S, Cs = _obj_0.P, _obj_0.S, _obj_0.Cs
+  end
+  local newline = P("\r") ^ -1 * P("\n")
+  local rest_of_line = (1 - newline) ^ 0 * (newline + P(-1))
+  local comment = P("--" * rest_of_line)
+  local existing_header = P("-- Generated schema dump") * rest_of_line * comment ^ 0
+  local replaced_header = Cs(existing_header / replacement)
+  local patt = Cs((1 - replaced_header) ^ 0 * replaced_header * P(1) ^ 0)
+  return patt:match(input)
+end
 local annotate_model
 annotate_model = function(config, fname, options)
   if options == nil then
@@ -124,9 +139,9 @@ annotate_model = function(config, fname, options)
   local model
   if fname:match(".moon$") then
     local moonscript = require("moonscript.base")
-    model = assert(moonscript.loadfile(fname)())
+    model = assert(assert(moonscript.loadfile(fname))())
   else
-    model = assert(loadfile(fname)())
+    model = assert(assert(loadfile(fname))())
   end
   local header_lines
   local _exp_0 = options.format
@@ -145,15 +160,13 @@ annotate_model = function(config, fname, options)
   for idx, line in ipairs(header_lines) do
     header_lines[idx] = ("-- " .. tostring(line)):gsub("%s+$", "")
   end
-  local header = table.concat(header_lines, "\n")
-  local source_with_header
-  if source:match("%-%- Generated .-\nclass ") then
-    source_with_header = source:gsub("%-%- Generated .-\nclass ", tostring(header) .. "\nclass ", 1)
-  else
-    source_with_header = source:gsub("class ", tostring(header) .. "\nclass ", 1)
+  local header = table.concat(header_lines, "\n") .. "\n"
+  local updated_source = replace_header(source, header)
+  if not (updated_source) then
+    updated_source = source:gsub("class ", tostring(header) .. "class ", 1)
   end
-  local source_out = io.open(fname, "w")
-  source_out:write(source_with_header)
+  local source_out = assert(io.open(fname, "w"))
+  source_out:write(updated_source)
   return source_out:close()
 end
 local parsed_args = false
@@ -161,7 +174,7 @@ return {
   argparser = function()
     parsed_args = true
     do
-      local _with_0 = require("argparse")("lapis annotate", "Extract schema information from database table to comment model")
+      local _with_0 = require("argparse")("lapis annotate", "Extract schema information from model's table to comment model")
       _with_0:argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)"):args("+")
       _with_0:option("--preload-module", "Module to require before annotating a model"):argname("<name>")
       _with_0:option("--format", "What dump format to use"):choices({

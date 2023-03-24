@@ -64,6 +64,19 @@ extract_schema_table = (config, model) ->
   return for line in schema\gmatch "[^\n]+"
     line\gsub("%s+$", "")
 
+replace_header = (input, replacement) ->
+  import P, S, Cs from require("lpeg")
+  newline = P"\r"^-1 * P"\n"
+  rest_of_line = (1 - newline)^0 * (newline + P -1)
+
+  comment = P "--" * rest_of_line
+
+  existing_header = P("-- Generated schema dump") * rest_of_line * comment^0
+  replaced_header = Cs existing_header / replacement
+
+  patt = Cs (1 - replaced_header)^0 * replaced_header * P(1)^0
+  patt\match input
+
 annotate_model = (config, fname, options={}) ->
   source_f = assert io.open fname, "r"
   source = assert source_f\read "*all"
@@ -71,9 +84,9 @@ annotate_model = (config, fname, options={}) ->
 
   model = if fname\match ".moon$"
     moonscript = require "moonscript.base"
-    assert moonscript.loadfile(fname)!
+    assert assert(moonscript.loadfile(fname))!
   else
-    assert loadfile(fname)!
+    assert assert(loadfile(fname))!
 
   header_lines = switch options.format
     when "sql"
@@ -93,16 +106,16 @@ annotate_model = (config, fname, options={}) ->
   for idx, line in ipairs header_lines
     header_lines[idx] = "-- #{line}"\gsub("%s+$", "")
 
-  header = table.concat header_lines, "\n"
+  header = table.concat(header_lines, "\n") .. "\n"
 
-  -- NOTE: this only works on moonscript for files that haven't been already processed
-  source_with_header = if source\match "%-%- Generated .-\nclass "
-    source\gsub "%-%- Generated .-\nclass ", "#{header}\nclass ", 1
-  else
-    source\gsub "class ", "#{header}\nclass ", 1
+  updated_source = replace_header source, header
 
-  source_out = io.open fname, "w"
-  source_out\write source_with_header
+  -- TODO: this is kinda sloppy and only works with MoonScript
+  unless updated_source
+    updated_source = source\gsub "class ", "#{header}class ", 1
+
+  source_out = assert io.open fname, "w"
+  source_out\write updated_source
   source_out\close!
 
 parsed_args = false
@@ -110,7 +123,7 @@ parsed_args = false
 {
   argparser: ->
     parsed_args = true
-    with require("argparse") "lapis annotate", "Extract schema information from database table to comment model"
+    with require("argparse") "lapis annotate", "Extract schema information from model's table to comment model"
       \argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)")\args "+"
       \option("--preload-module", "Module to require before annotating a model")\argname "<name>"
       \option("--format", "What dump format to use")\choices({"sql", "table"})\default "sql"
