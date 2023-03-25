@@ -99,6 +99,68 @@ extract_schema_sql = function(config, model)
     return _accum_0
   end)()
 end
+local enum_to_comment
+enum_to_comment = function(enum)
+  local keys
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for k in pairs(enum) do
+      if type(k) == "number" then
+        _accum_0[_len_0] = k
+        _len_0 = _len_0 + 1
+      end
+    end
+    keys = _accum_0
+  end
+  table.sort(keys)
+  return "enum(" .. table.concat((function()
+    local _accum_0 = { }
+    local _len_0 = 1
+    for _index_0 = 1, #keys do
+      local k = keys[_index_0]
+      _accum_0[_len_0] = tostring(enum[k]) .. " = " .. tostring(k)
+      _len_0 = _len_0 + 1
+    end
+    return _accum_0
+  end)(), ", ") .. ")"
+end
+local print_enum_comments_for_model
+print_enum_comments_for_model = function(model, table_model)
+  if type(model) == "string" then
+    model = require(model)
+  end
+  if not (table_model) then
+    table_model = model
+  end
+  local instance_of
+  instance_of = require("tableshape.moonscript").instance_of
+  local Enum
+  Enum = require("lapis.db.model").Enum
+  local is_enum = instance_of(Enum):describe("db.enum")
+  local db = require("lapis.db")
+  local singularize
+  singularize = require("lapis.util").singularize
+  for k, v in pairs(model) do
+    local _continue_0 = false
+    repeat
+      if not (is_enum(v)) then
+        _continue_0 = true
+        break
+      end
+      local table_name = table_model:table_name()
+      local column_name = singularize(k)
+      print(([[db.query(%q, %q)]]):format("comment on column " .. tostring(db.escape_identifier(table_name)) .. "." .. tostring(db.escape_identifier(column_name)) .. " is ?", enum_to_comment(v)))
+      _continue_0 = true
+    until true
+    if not _continue_0 then
+      break
+    end
+  end
+  if model.__parent then
+    return print_enum_comments_for_model(model.__parent, table_model)
+  end
+end
 local extract_schema_table
 extract_schema_table = function(config, model)
   local table_name = model:table_name()
@@ -149,6 +211,11 @@ annotate_model = function(config, fname, options)
     header_lines = extract_schema_sql(config, model)
   elseif "table" == _exp_0 then
     header_lines = extract_schema_table(config, model)
+  elseif "generate_enum_comments" == _exp_0 then
+    print_enum_comments_for_model(model)
+    return 
+  else
+    header_lines = error("Unimplemented format: " .. tostring(options.format))
   end
   if options.print then
     print(table.concat(header_lines, "\n"))
@@ -179,7 +246,8 @@ return {
       _with_0:option("--preload-module", "Module to require before annotating a model"):argname("<name>")
       _with_0:option("--format", "What dump format to use"):choices({
         "sql",
-        "table"
+        "table",
+        "generate_enum_comments"
       }):default("sql")
       _with_0:flag("--print -p", "Print the output instead of editing the model files")
       return _with_0

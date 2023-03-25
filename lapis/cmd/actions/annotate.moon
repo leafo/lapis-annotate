@@ -57,6 +57,40 @@ extract_schema_sql = (config, model) ->
     line\gsub "    ", "  "
 
 
+-- this can be used to annotate enum columns with a comment in the schema
+enum_to_comment = (enum) ->
+  keys = [k for k in pairs enum when type(k) == "number"]
+  table.sort keys
+  "enum(" .. table.concat(["#{enum[k]} = #{k}" for k in *keys], ", ") .. ")"
+
+print_enum_comments_for_model = (model, table_model) ->
+  if type(model) == "string"
+    model = require model
+
+  table_model = model unless table_model
+
+  import instance_of from require "tableshape.moonscript"
+  import Enum from require "lapis.db.model"
+
+  is_enum = instance_of(Enum)\describe "db.enum"
+
+  db = require "lapis.db" -- NOTE: this the default environment
+
+  import singularize from require "lapis.util"
+  for k,v in pairs model
+    continue unless is_enum v
+    table_name = table_model\table_name!
+    column_name = singularize k
+
+    print [[db.query(%q, %q)]]\format(
+      "comment on column #{db.escape_identifier table_name}.#{db.escape_identifier column_name} is ?"
+      enum_to_comment v
+    )
+
+  if model.__parent
+    print_enum_comments_for_model model.__parent, table_model
+
+
 extract_schema_table = (config, model) ->
   table_name = model\table_name!
   schema = exec build_command "psql -c #{shell_escape "\\d #{table_name}"}", config
@@ -93,6 +127,11 @@ annotate_model = (config, fname, options={}) ->
       extract_schema_sql config, model
     when "table"
       extract_schema_table config, model
+    when "generate_enum_comments"
+      print_enum_comments_for_model model
+      return
+    else
+      error "Unimplemented format: #{options.format}"
 
   if options.print
     print table.concat header_lines, "\n"
@@ -126,7 +165,7 @@ parsed_args = false
     with require("argparse") "lapis annotate", "Extract schema information from model's table to comment model"
       \argument("files", "Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)")\args "+"
       \option("--preload-module", "Module to require before annotating a model")\argname "<name>"
-      \option("--format", "What dump format to use")\choices({"sql", "table"})\default "sql"
+      \option("--format", "What dump format to use")\choices({"sql", "table", "generate_enum_comments"})\default "sql"
       \flag("--print -p", "Print the output instead of editing the model files")
 
   (args, lapis_args) =>
