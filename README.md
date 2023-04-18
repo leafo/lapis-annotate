@@ -13,6 +13,30 @@ $ luarocks install lapis-annotate
 ## Usage
 
 ```
+$ lapis annotate help
+Usage: lapis annotate [-h] [--preload-module <name>]
+       [--format {sql,table,generate_enum_comments}] [--print]
+       <files> [<files>] ...
+
+Extract schema information from model's table to comment model
+
+Arguments:
+   files                 Paths to model classes to annotate (eg. models/first.moon models/second.moon ...)
+
+Options:
+   -h, --help            Show this help message and exit.
+   --preload-module <name>
+                         Module to require before annotating a model
+   --format {sql,table,generate_enum_comments}
+                         What dump format to use (default: sql)
+   --print, -p           Print the output instead of editing the model files
+
+```
+
+Example annotating a single model:
+
+
+```
 $ lapis annotate models/my_model.moon
 ```
 
