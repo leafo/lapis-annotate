@@ -77,6 +77,14 @@ extract_schema_sql = function(config, model)
           _continue_0 = true
           break
         end
+        if line:match("^\\restrict") then
+          _continue_0 = true
+          break
+        end
+        if line:match("^\\unrestrict") then
+          _continue_0 = true
+          break
+        end
         line = line:gsub(tostring(DEFAULT_SCHEMA) .. "%." .. tostring(table_name), table_name)
         if line:match("^ALTER TABLE") and not line:match("^ALTER TABLE ONLY") or line:match("nextval") then
           _continue_0 = true

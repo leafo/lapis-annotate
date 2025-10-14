@@ -44,6 +44,8 @@ extract_schema_sql = (config, model) ->
     continue if line\match "^SET"
     continue if line\match "^ALTER SEQUENCE"
     continue if line\match "^SELECT"
+    continue if line\match "^\\restrict"
+    continue if line\match "^\\unrestrict"
 
     line = line\gsub "#{DEFAULT_SCHEMA}%.#{table_name}", table_name
 
