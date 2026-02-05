@@ -23,7 +23,7 @@ build_command = function(cmd, config)
   do
     local password = config.postgres.password
     if password then
-      table.insert(1, command, "PGPASSWORD=" .. tostring(shell_escape(password)))
+      table.insert(command, 1, "PGPASSWORD=" .. tostring(shell_escape(password)))
     end
   end
   do
@@ -237,8 +237,16 @@ annotate_model = function(config, fname, options)
   end
   local header = table.concat(header_lines, "\n") .. "\n"
   local updated_source = replace_header(source, header)
-  if not (updated_source) then
-    updated_source = source:gsub("class ", tostring(header) .. "class ", 1)
+  if fname:match(".lua$") and not updated_source then
+    local lua_declaration = "local %w+ = Model:extend"
+    if not source:match(lua_declaration) then
+      print("\tLine matching '" .. tostring(lua_declaration) .. "' not found")
+    end
+    updated_source = source:gsub(lua_declaration, tostring(header) .. "%1 ", 1)
+  else
+    if not updated_source then
+      updated_source = source:gsub("class ", tostring(header) .. "class ", 1)
+    end
   end
   local source_out = assert(io.open(fname, "w"))
   source_out:write(updated_source)

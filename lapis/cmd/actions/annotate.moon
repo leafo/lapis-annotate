@@ -17,7 +17,7 @@ build_command = (cmd, config) ->
   command = { cmd }
 
   if password = config.postgres.password
-    table.insert 1, command, "PGPASSWORD=#{shell_escape password}"
+    table.insert command, 1, "PGPASSWORD=#{shell_escape password}"
 
   if host = config.postgres.host
     table.insert command, "-h #{shell_escape host}"
@@ -151,8 +151,12 @@ annotate_model = (config, fname, options={}) ->
 
   updated_source = replace_header source, header
 
-  -- TODO: this is kinda sloppy and only works with MoonScript
-  unless updated_source
+  -- TODO: this is kinda sloppy
+  if fname\match(".lua$") and not updated_source
+    lua_declaration = "local %w+ = Model:extend"
+    print "\tLine matching '#{lua_declaration}' not found" if not source\match lua_declaration
+    updated_source = source\gsub lua_declaration, "#{header}%1 ", 1
+  else if not updated_source
     updated_source = source\gsub "class ", "#{header}class ", 1
 
   source_out = assert io.open fname, "w"
