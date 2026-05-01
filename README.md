@@ -85,6 +85,7 @@ Only supports MoonScript and PostgreSQL at the moment
 
 ## Changes
 
+* **2026-05-01** `2.1.0` Exclude `\restrict` commands in `pg_dump` output on PostgreSQL 17+; move PostgreSQL implementation into a separate `lapis.annotate.pg_schema` module
 * **2021-03-15** `1.2.1` Don't include the default `public` table shema in output
 * **2018-04-03** `1.2.0` Strip any `SELECT` lines from the output
 * **2017-06-14** `1.1.0` Add support for db user/password (Skiouros), add shell escaping
