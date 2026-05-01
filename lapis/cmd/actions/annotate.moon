@@ -1,63 +1,4 @@
-import default_environment from require "lapis.cmd.util"
-
-shell_escape = (str) ->
-  "'#{str\gsub "'", "''"}'"
-
-exec = (cmd) ->
-  f = io.popen cmd
-  with f\read("*all")\gsub "%s*$", ""
-    f\close!
-
-DEFAULT_SCHEMA = "public"
-
--- add configuration arguments to cmd, return unjoined command
-build_command = (cmd, config) ->
-  database = assert config.postgres and config.postgres.database, "missing postgres database configuration"
-
-  command = { cmd }
-
-  if password = config.postgres.password
-    table.insert 1, command, "PGPASSWORD=#{shell_escape password}"
-
-  if host = config.postgres.host
-    table.insert command, "-h #{shell_escape host}"
-
-  if user = config.postgres.user
-    table.insert command, "-U #{shell_escape user}"
-
-  table.insert command, shell_escape database
-  table.concat command, " "
-
-extract_schema_sql = (config, model) ->
-  table_name = model\table_name!
-
-  schema = exec build_command "pg_dump --schema-only -t #{shell_escape table_name}", config
-
-  in_block = false
-
-  return for line in schema\gmatch "[^\n]+"
-    if in_block
-      in_block = false unless line\match "^%s"
-      continue if in_block
-
-    continue if line\match "^%-%-"
-    continue if line\match "^SET"
-    continue if line\match "^ALTER SEQUENCE"
-    continue if line\match "^SELECT"
-    continue if line\match "^\\restrict"
-    continue if line\match "^\\unrestrict"
-
-    line = line\gsub "#{DEFAULT_SCHEMA}%.#{table_name}", table_name
-
-    if line\match("^ALTER TABLE" ) and not line\match("^ALTER TABLE ONLY") or line\match "nextval"
-      continue
-
-    if line\match "CREATE SEQUENCE"
-      in_block = true
-      continue
-
-    line\gsub "    ", "  "
-
+import extract_schema_sql, extract_schema_table from require "lapis.annotate.pg_schema"
 
 -- this can be used to annotate enum columns with a comment in the schema
 enum_to_comment = (enum) ->
@@ -92,13 +33,6 @@ print_enum_comments_for_model = (model, table_model) ->
   if model.__parent
     print_enum_comments_for_model model.__parent, table_model
 
-
-extract_schema_table = (config, model) ->
-  table_name = model\table_name!
-  schema = exec build_command "psql -c #{shell_escape "\\d #{table_name}"}", config
-
-  return for line in schema\gmatch "[^\n]+"
-    line\gsub("%s+$", "")
 
 replace_header = (input, replacement) ->
   import P, S, Cs from require("lpeg")

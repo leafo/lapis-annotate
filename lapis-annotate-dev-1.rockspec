@@ -19,6 +19,7 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
+    ["lapis.annotate.pg_schema"] = "lapis/annotate/pg_schema.lua",
     ["lapis.cmd.actions.annotate"] = "lapis/cmd/actions/annotate.lua",
   }
 }
